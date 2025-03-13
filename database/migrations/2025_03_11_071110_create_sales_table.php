@@ -13,6 +13,9 @@ return new class extends Migration
     {
         Schema::create('sales', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('book_id')->constrained('books')->onDelete('cascade'); // Foreign key to books
+            $table->integer('quantity'); // Number of copies sold
+            $table->date('sale_date'); // Date of sale
             $table->timestamps();
         });
     }

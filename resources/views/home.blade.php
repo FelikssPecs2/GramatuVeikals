@@ -5,8 +5,8 @@
 <div class="flex items-center">
 <form method="POST" action="{{ route('logout') }}">
     @csrf
-    <button type="submit" class="px-4 py-2">
-        {{ __('Log Out') }}
+    <button type="submit" class="px-6 py-4">
+        {{ __('Iziet') }}
     </button>
 </form>
 </div>
@@ -16,5 +16,5 @@
 @endsection
 
 @section('content')
-    <p>This is the content of the home page.</p>
+    <p>Kautkada informacija seit!!!!</p>
 @endsection
