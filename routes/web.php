@@ -38,6 +38,7 @@ Route::get('/register', [RegisteredUserController::class, 'create'])
     ->name('register');
 
 Route::post('/register', [RegisteredUserController::class, 'store'])->middleware('guest');
+Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
 
 // Home Route (Authenticated Users)
 Route::get('/home', [HomeController::class, 'index'])
@@ -51,6 +52,7 @@ Route::get('/home', [HomeController::class, 'index'])
     Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
     Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
     Route::delete('/sales/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
+    Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
 
 
     Route::get('/genres', [GenreController::class, 'index'])->name('genres.index');

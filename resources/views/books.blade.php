@@ -1,14 +1,62 @@
 @extends('layouts.app')
 
 @section('content')
+
     <div class="container mt-4">
         <h1>Grāmatas</h1>
-
+            
         {{-- Rādīt "Pievienot grāmatu" pogu tikai administratoriem --}}
         @if(auth()->check() && auth()->user()->isAdmin())
             <a href="#" class="btn btn-primary" onclick="showCreateForm()">Pievienot grāmatu</a>
         @endif
+        <div class="container mt-4">
 
+{{-- Search Form --}}
+<form action="{{ route('books.index') }}" method="GET" class="mb-4">
+    <div class="row">
+        {{-- Search by Book Name --}}
+        <div class="col-md-4">
+            <label for="search">Meklēt pēc nosaukuma:</label>
+            <input type="text" name="search" id="search" class="form-control" value="{{ request('search') }}" placeholder="Ievadiet grāmatas nosaukumu">
+        </div>
+
+        {{-- Search by Author --}}
+        <div class="col-md-4">
+            <label for="author">Meklēt pēc autora:</label>
+            <select name="author" id="author" class="form-control">
+                <option value="">Izvēlieties autoru</option>
+                @foreach($authors as $author)
+                    <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                @endforeach
+            </select>
+        </div>
+
+        {{-- Filter by Genre --}}
+        <div class="col-md-4">
+            <label for="genre">Filtrēt pēc žanra:</label>
+            <select name="genre" id="genre" class="form-control">
+                <option value="">Izvēlieties žanru</option>
+                @foreach($genres as $genre)
+                    <option value="{{ $genre->id }}" {{ request('genre') == $genre->id ? 'selected' : '' }}>{{ $genre->name }}</option>
+                @endforeach
+            </select>
+        </div>
+    </div>
+
+    {{-- Submit Button --}}
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <button type="submit" class="btn btn-primary">Meklēt</button>
+            <a href="{{ route('books.index') }}" class="btn btn-secondary">Notīrīt filtrus</a>
+        </div>
+    </div>
+</form>
+
+{{-- Rest of your table and content --}}
+<table class="table mt-4">
+    <!-- Your table content here -->
+</table>
+</div>
         {{-- Grāmatu saraksta tabula --}}
         <table class="table mt-4">
             <thead>
@@ -46,7 +94,7 @@
 
                             {{-- info poga redzam tikai administratoriem --}}
                             @if(auth()->check() && auth()->user()->isAdmin())
-                                <a href="#" class="btn btn-warning" onclick="showEditForm('{{ $book->id }}', '{{ $book->title }}', '{{ $book->author_id }}', '{{ $book->price }}', '{{ $book->age }}', '{{ $book->pages }}', '{{ $book->description }}')">Rediģēt</a> {{-- Include price in edit form --}}
+                                <a href="#" class="btn btn-warning" onclick="showEditForm('{{ $book->id }}', '{{ $book->title }}', '{{ $book->author_id }}', '{{ $book->price }}', '{{ $book->age }}', '{{ $book->pages }}', '{{ $book->description }}', @json($book->genres->pluck('id')->toArray()))">Rediģēt</a> {{-- Include price in edit form --}}
                                 <form action="{{ route('books.destroy', $book) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
@@ -76,40 +124,58 @@
             }
 
             function showCreateForm() {
-                document.getElementById('bookForm').style.display = 'block';
-                document.getElementById('formTitle').innerText = 'Izveidot grāmatu';
-                document.getElementById('bookFormElement').action = '{{ route('books.store') }}';
-                document.getElementById('formMethod').value = 'POST';
-                document.getElementById('title').value = '';
-                document.getElementById('price').value = ''; // Clear price field
-                document.getElementById('age').value = ''; // Clear age field
-                document.getElementById('pages').value = ''; // Clear pages field
-                document.getElementById('description').value = ''; // Clear description field
-                // Reset genre selection
-                $('#genres').val(null).trigger('change');
+                openFormModal('Izveidot grāmatu', '{{ route('books.store') }}', 'POST');
+                resetForm();
             }
 
-            function showEditForm(id, title, authorId, price, age, pages, description) {
-                document.getElementById('bookForm').style.display = 'block';
-                document.getElementById('formTitle').innerText = 'Rediģēt grāmatu';
-                document.getElementById('bookFormElement').action = '/books/' + id;
-                document.getElementById('formMethod').value = 'PUT';
-                document.getElementById('title').value = title;
-                document.getElementById('author').value = authorId;
-                document.getElementById('price').value = price; // Populate price field
-                document.getElementById('age').value = age ? age : ''; // Populate age field
-                document.getElementById('pages').value = pages ? pages : ''; // Populate pages field
-                document.getElementById('description').value = description ? description : ''; // Populate description field
+            function showEditForm(id, title, authorId, price, age, pages, description, selectedGenres) {
+                openFormModal('Rediģēt grāmatu', '/books/' + id, 'PUT');
+                populateForm(title, authorId, price, age, pages, description, selectedGenres);
             }
 
-            function hideForm() {
-                document.getElementById('bookForm').style.display = 'none';
+            function openFormModal(formTitle, formAction, formMethod) {
+                document.getElementById('formModal').style.display = 'flex';
+                document.getElementById('formTitle').innerText = formTitle;
+                document.getElementById('bookFormElement').action = formAction;
+                document.getElementById('formMethod').value = formMethod;
+            }
+
+            function closeFormModal() {
+                document.getElementById('formModal').style.display = 'none';
+            }
+
+            function resetForm() {
+            document.getElementById('title').value = '';
+            document.getElementById('price').value = '';
+            document.getElementById('age').value = '';
+            document.getElementById('pages').value = '';
+            document.getElementById('description').value = '';
+
+            // Noņemt atzīmes no visiem checkboxiem
+            document.querySelectorAll('input[name="genre_ids[]"]').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+        }
+
+            function populateForm(title, authorId, price, age, pages, description, selectedGenres) {
+            document.getElementById('title').value = title;
+            document.getElementById('author').value = authorId;
+            document.getElementById('price').value = price;
+            document.getElementById('age').value = age ? age : '';
+            document.getElementById('pages').value = pages ? pages : '';
+            document.getElementById('description').value = description ? description : '';
+
+                // Atzīmēt atlasītos žanrus
+                selectedGenres.forEach(genreId => {
+                    document.querySelector(`input[name="genre_ids[]"][value="${genreId}"]`).checked = true;
+                });
             }
 
             // Initialize Select2 for genres
             $(document).ready(function() {
                 $('#genres').select2({
-                    placeholder: "Izvēlieties žanrus"
+                    placeholder: "Izvēlieties žanrus",
+                    multiple: true // Enable multi-select
                 });
             });
         </script>
@@ -132,59 +198,64 @@
         </div>
 
         {{-- Grāmatas izveides/rediģēšanas forma (sākotnēji paslēpta) --}}
-        <div id="bookForm" class="mt-4" style="display: none;">
-            <h2 id="formTitle">Izveidot grāmatu</h2>
+        <div id="formModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+    <div class="modal-content" style="background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 550px;">
+        <h2 id="formTitle">Izveidot grāmatu</h2>
 
-            <form id="bookFormElement" action="{{ route('books.store') }}" method="POST">
-                @csrf
-                <input type="hidden" name="_method" id="formMethod" value="POST">
+        <form id="bookFormElement" action="{{ route('books.store') }}" method="POST">
+            @csrf
+            <input type="hidden" name="_method" id="formMethod" value="POST">
 
-                <div class="form-group">
-                    <label for="title">Grāmatas nosaukums:</label>
-                    <input type="text" name="title" id="title" class="form-control" required>
+            <div class="form-group">
+                <label for="title">Grāmatas nosaukums:</label>
+                <input type="text" name="title" id="title" class="form-control" required>
+            </div>
+
+            <div class="form-group">
+                <label for="author">Autors:</label>
+                <select name="author_id" id="author" class="form-control" required>
+                    @foreach($authors as $author)
+                        <option value="{{ $author->id }}">{{ $author->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Žanri:</label>
+                <div>
+                    @foreach($genres as $genre)
+                        <div>
+                            <input type="checkbox" name="genre_ids[]" id="genre_{{ $genre->id }}" value="{{ $genre->id }}">
+                            <label for="genre_{{ $genre->id }}">{{ $genre->name }}</label>
+                        </div>
+                    @endforeach
                 </div>
+            </div>
 
-                <div class="form-group">
-                    <label for="author">Autors:</label>
-                    <select name="author_id" id="author" class="form-control" required>
-                        @foreach($authors as $author)
-                            <option value="{{ $author->id }}">{{ $author->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="price">Cena:</label>
+                <input type="number" name="price" id="price" class="form-control" step="0.01" required>
+            </div>
 
-                <div class="form-group">
-                    <label for="genres">Žanri:</label>
-                    <select name="genre_ids[]" id="genres" class="form-control" multiple required>
-                        @foreach($genres as $genre)
-                            <option value="{{ $genre->id }}">{{ $genre->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+            <div class="form-group">
+                <label for="age">Vecums:</label>
+                <input type="number" name="age" id="age" class="form-control" value="{{ old('age') }}">
+            </div>
 
-                <div class="form-group">
-                    <label for="price">Cena:</label>
-                    <input type="number" name="price" id="price" class="form-control" step="0.01" required>
-                </div>
+            <div class="form-group">
+                <label for="pages">Lappušu skaits:</label>
+                <input type="number" name="pages" id="pages" class="form-control" value="{{ old('pages') }}">
+            </div>
 
-        <div class="form-group">
-    <label for="age">Vecums:</label>
-    <input type="number" name="age" id="age" class="form-control" value="{{ old('age') }}">
-</div>
+            <div class="form-group">
+                <label for="description">Apraksts:</label>
+                <textarea name="description" id="description" class="form-control">{{ old('description') }}</textarea>
+            </div>
 
-<div class="form-group">
-    <label for="pages">Lappušu skaits:</label>
-    <input type="number" name="pages" id="pages" class="form-control" value="{{ old('pages') }}">
-</div>
-
-<div class="form-group">
-    <label for="description">Apraksts:</label>
-    <textarea name="description" id="description" class="form-control">{{ old('description') }}</textarea>
-</div>
-
-                <button type="submit" class="btn btn-primary">Saglabāt</button>
-                <button type="button" class="btn btn-secondary" onclick="hideForm()">Atcelt</button>
-            </form>
-        </div>
+            <button type="submit" class="btn btn-primary">Saglabāt</button>
+            <button type="button" class="btn btn-secondary" onclick="closeFormModal()">Atcelt</button>
+        </form>
     </div>
+</div>
+
 @endsection

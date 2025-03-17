@@ -5,8 +5,7 @@
         <h1>Žanri</h1>
 
         @if(auth()->check() && auth()->user()->isAdmin())
-            <a href="#" class="btn btn-primary" onclick="showCreateForm()">Pievienojiet žanru
-</a>
+            <a href="#" class="btn btn-primary" onclick="showGenreModal()">Pievienojiet žanru</a>
         @endif
 
         {{-- Genre List Table --}}
@@ -14,20 +13,20 @@
             <thead>
                 <tr>
                     <th>Žanra nosaukums</th>
-                    
+
                     @if(auth()->check() && auth()->user()->isAdmin())
                         <th>Darbības</th>
                     @endif
                 </tr>
             </thead>
             <tbody>
-                @foreach($genres as $genre)  <!-- Loop through $genres, not $authors -->
+                @foreach($genres as $genre)
                     <tr>
                         <td>{{ $genre->name }}</td>
                         {{-- Show Edit/Delete buttons only for admins --}}
                         @if(auth()->check() && auth()->user()->isAdmin())
                             <td>
-                                <a href="#" class="btn btn-warning" onclick="showEditForm('{{ $genre->id }}', '{{ $genre->name }}')">Rediģēt</a>
+                                <a href="#" class="btn btn-warning" onclick="showGenreModal('{{ $genre->id }}', '{{ $genre->name }}')">Rediģēt</a>
                                 <form action="{{ route('genres.destroy', $genre) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
@@ -40,55 +39,36 @@
             </tbody>
         </table>
 
-        {{-- Create Genre Form (Hidden by Default) --}}
-        <div id="createGenreForm" class="mt-4" style="display: none;">
-            <h2>Pievienot Žanru</h2>
-            <form action="{{ route('genres.store') }}" method="POST">
-                @csrf
-                <div class="form-group">
-                    <label for="name">Žanra nosaukums:</label>
-                    <input type="text" name="name" id="name" class="form-control">
-                </div>
-                <button type="submit" class="btn btn-primary">Veidot</button>
-                <button type="button" class="btn btn-secondary" onclick="hideForms()">Atcelt
-</button>
-            </form>
-        </div>
-
-        {{-- Edit Genre Form (Hidden by Default) --}}
-        <div id="editGenreForm" class="mt-4" style="display: none;">
-            <h2>Rediģēt žanru</h2>
-            <form id="editForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="form-group">
-                    <label for="editName">Žanra nosaukums:</label>
-                    <input type="text" name="name" id="editName" class="form-control">
-                </div>
-                <button type="submit" class="btn btn-primary">Atjaunināt</button>
-                <button type="button" class="btn btn-secondary" onclick="hideForms()">Atcelt
-</button>
-            </form>
+        {{-- Genre Modal --}}
+        <div id="genreModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+            <div class="modal-content" style="background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 400px;">
+                <h2 id="genreFormTitle">Pievienot žanru</h2>
+                <form id="genreFormElement" action="{{ route('genres.store') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="_method" id="genreFormMethod" value="POST">
+                    <div class="form-group">
+                        <label for="name">Žanra nosaukums:</label>
+                        <input type="text" name="name" id="name" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Saglabāt</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideGenreModal()">Atcelt</button>
+                </form>
+            </div>
         </div>
     </div>
 
-    {{-- JavaScript to Show/Hide Forms Dynamically --}}
+    {{-- JavaScript to Show/Hide the Modal --}}
     <script>
-        function showCreateForm() {
-            document.getElementById('createGenreForm').style.display = 'block';
-            document.getElementById('editGenreForm').style.display = 'none';
+        function showGenreModal(id = null, name = '') {
+            document.getElementById('genreModal').style.display = 'flex';
+            document.getElementById('genreFormTitle').innerText = id ? 'Rediģēt žanru' : 'Pievienot žanru';
+            document.getElementById('genreFormElement').action = id ? '/genres/' + id : '{{ route('genres.store') }}';
+            document.getElementById('genreFormMethod').value = id ? 'PUT' : 'POST';
+            document.getElementById('name').value = name;
         }
 
-        function showEditForm(id, name) {
-            document.getElementById('editGenreForm').style.display = 'block';
-            document.getElementById('createGenreForm').style.display = 'none';
-            document.getElementById('editName').value = name;
-            document.getElementById('editForm').action = '/genres/' + id;
-        }
-
-        function hideForms() {
-            document.getElementById('createGenreForm').style.display = 'none';
-            document.getElementById('editGenreForm').style.display = 'none';
+        function hideGenreModal() {
+            document.getElementById('genreModal').style.display = 'none';
         }
     </script>
 @endsection

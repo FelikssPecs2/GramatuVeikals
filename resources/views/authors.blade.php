@@ -6,7 +6,7 @@
 
         {{-- Rādīt "Pievienot autoru" pogu tikai administratoriem --}}
         @if(auth()->check() && auth()->user()->isAdmin())
-            <a href="#" class="btn btn-primary" onclick="showCreateForm()">Pievienot autoru</a>
+            <a href="#" class="btn btn-primary" onclick="showAuthorModal()">Pievienot autoru</a>
         @endif
 
         {{-- Autoru saraksta tabula --}}
@@ -25,8 +25,7 @@
                         <td>{{ $author->name }}</td>
                         @if(auth()->check() && auth()->user()->isAdmin())
                             <td>
-                                <!-- Mainīta rediģēšanas poga, lai izmantotu JavaScript funkciju -->
-                                <a href="#" class="btn btn-warning" onclick="showEditForm('{{ $author->id }}', '{{ $author->name }}')">Rediģēt</a>
+                                <a href="#" class="btn btn-warning" onclick="showAuthorModal('{{ $author->id }}', '{{ $author->name }}')">Rediģēt</a>
                                 <form action="{{ route('authors.destroy', $author) }}" method="POST" style="display:inline;">
                                     @csrf
                                     @method('DELETE')
@@ -39,53 +38,38 @@
             </tbody>
         </table>
 
-        {{-- Autora izveides forma (sākotnēji paslēpta) --}}
-        <div id="createAuthorForm" class="mt-4" style="display: none;">
-            <h2>Izveidot autoru</h2>
-            <form action="{{ route('authors.store') }}" method="POST">
-                @csrf
-                <div class="form-group">
-                    <label for="name">Autora vārds:</label>
-                    <input type="text" name="name" id="name" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Izveidot</button>
-                <button type="button" class="btn btn-secondary" onclick="hideForms()">Atcelt</button>
-            </form>
-        </div>
+        {{-- Modālais logs autora pievienošanai/rediģēšanai --}}
+        <div id="authorModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center;">
+            <div class="modal-content" style="background: white; padding: 20px; border-radius: 10px; text-align: center; max-width: 400px;">
+                <h2 id="authorFormTitle">Izveidot autoru</h2>
 
-        {{-- Autora rediģēšanas forma (sākotnēji paslēpta) --}}
-        <div id="editAuthorForm" class="mt-4" style="display: none;">
-            <h2>Rediģēt autoru</h2>
-            <form id="editForm" method="POST">
-                @csrf
-                @method('PUT')
-                <div class="form-group">
-                    <label for="editName">Autora vārds:</label>
-                    <input type="text" name="name" id="editName" class="form-control" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Atjaunināt</button>
-                <button type="button" class="btn btn-secondary" onclick="hideForms()">Atcelt</button>
-            </form>
+                <form id="authorFormElement" action="{{ route('authors.store') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="_method" id="authorFormMethod" value="POST">
+
+                    <div class="form-group">
+                        <label for="name">Autora vārds:</label>
+                        <input type="text" name="name" id="name" class="form-control" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Saglabāt</button>
+                    <button type="button" class="btn btn-secondary" onclick="hideAuthorModal()">Atcelt</button>
+                </form>
+            </div>
         </div>
     </div>
 
     <script>
-        function showEditForm(id, name) {
-            document.getElementById('editAuthorForm').style.display = 'block';
-            document.getElementById('createAuthorForm').style.display = 'none';
-
-            document.getElementById('editName').value = name;
-            document.getElementById('editForm').action = '/authors/' + id;
+        function showAuthorModal(id = null, name = '') {
+            document.getElementById('authorModal').style.display = 'flex';
+            document.getElementById('authorFormTitle').innerText = id ? 'Rediģēt autoru' : 'Izveidot autoru';
+            document.getElementById('authorFormElement').action = id ? '/authors/' + id : '{{ route('authors.store') }}';
+            document.getElementById('authorFormMethod').value = id ? 'PUT' : 'POST';
+            document.getElementById('name').value = name;
         }
 
-        function showCreateForm() {
-            document.getElementById('createAuthorForm').style.display = 'block';
-            document.getElementById('editAuthorForm').style.display = 'none';
-        }
-
-        function hideForms() {
-            document.getElementById('createAuthorForm').style.display = 'none';
-            document.getElementById('editAuthorForm').style.display = 'none';
+        function hideAuthorModal() {
+            document.getElementById('authorModal').style.display = 'none';
         }
     </script>
 @endsection

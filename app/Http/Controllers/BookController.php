@@ -17,26 +17,36 @@ class BookController extends Controller
     // Display all books
     public function index(Request $request)
     {
-        $search = $request->get('search'); // Get the search query
-        
-        $books = Book::with('author', 'genres')
-            ->when($search, function ($query, $search) {
-                return $query->where('title', 'like', "%{$search}%")
-                    ->orWhereHas('author', function ($query) use ($search) {
-                        $query->where('name', 'like', "%{$search}%");
-                    })
-                    ->orWhereHas('genres', function ($query) use ($search) {
-                        $query->where('name', 'like', "%{$search}%");
-                    });
-            })
-            ->get();
-        
+        // Get all authors and genres for the dropdowns
         $authors = Author::all();
         $genres = Genre::all();
     
-        return view('books', compact('books', 'authors', 'genres', 'search'));
-    }
+        // Start the query
+        $books = Book::with('author', 'genres');
     
+        // Search by book title
+        if ($request->has('search') && $request->search != '') {
+            $books->where('title', 'like', '%' . $request->search . '%');
+        }
+    
+        // Filter by author
+        if ($request->has('author') && $request->author != '') {
+            $books->where('author_id', $request->author);
+        }
+    
+        // Filter by genre
+        if ($request->has('genre') && $request->genre != '') {
+            $books->whereHas('genres', function ($query) use ($request) {
+                $query->where('genres.id', $request->genre);
+            });
+        }
+    
+        // Get the filtered books
+        $books = $books->paginate(10);
+    
+        // Pass data to the view
+        return view('books', compact('books', 'authors', 'genres'));
+    }
 
     // Show form for creating a new book
     public function store(Request $request)
@@ -68,7 +78,10 @@ class BookController extends Controller
         return redirect()->route('books.index');
     }
     
-
+public function getGenres(Book $book)
+{
+    return response()->json($book->genres);
+}
     // Show form for editing a book
     public function edit($id)
     {
@@ -82,7 +95,7 @@ class BookController extends Controller
     }
 
     // Update an existing book
-    public function update(Request $request, Book $book)
+public function update(Request $request, Book $book)
 {
     $request->validate([
         'title' => 'required|string|max:255',
@@ -95,16 +108,17 @@ class BookController extends Controller
         'description' => 'nullable|string',
     ]);
 
+    // Update the book fields
     $book->update([
         'title' => $request->title,
         'author_id' => $request->author_id,
         'price' => $request->price,
-        'age' => $request->age, // Jauns vecuma lauks
-        'pages' => $request->pages, // Jauns lappušu skaita lauks
-        'description' => $request->description, // Jauns apraksta lauks
+        'age' => $request->age,  // Update age
+        'pages' => $request->pages,  // Update pages
+        'description' => $request->description,  // Update description
     ]);
 
-    // Sinhronizēt žanrus ar grāmatu
+    // Sync genres
     $book->genres()->sync($request->genre_ids);
 
     return redirect()->route('books.index');
@@ -118,4 +132,6 @@ class BookController extends Controller
 
         return redirect()->route('books.index');
     }
+
+    
 }
