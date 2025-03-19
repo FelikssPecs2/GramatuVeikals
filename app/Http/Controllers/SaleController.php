@@ -78,4 +78,14 @@ class SaleController extends Controller
         $sale = Sale::with('book')->find($sale->id); // Eager load the 'book' relationship
         return view('sales', compact('sale', 'books'));
     }
+
+
+    public function show($id)
+    {
+        // Retrieve the sale by its ID
+        $sale = Sale::with('book')->findOrFail($id);  // Eager load the book relationship
+    
+        // Return a view to display the sale details
+        return view('sales.show', compact('sale'));
+    }
 }

@@ -6,7 +6,7 @@
         <h1>Grāmatas</h1>
             
         {{-- Rādīt "Pievienot grāmatu" pogu tikai administratoriem --}}
-        @if(auth()->check() && auth()->user()->isAdmin())
+        @if(auth()->check() && auth()->user()-> isAdmin())
             <a href="#" class="btn btn-primary" onclick="showCreateForm()">Pievienot grāmatu</a>
         @endif
         <div class="container mt-4">
@@ -133,6 +133,7 @@
                 populateForm(title, authorId, price, age, pages, description, selectedGenres);
             }
 
+
             function openFormModal(formTitle, formAction, formMethod) {
                 document.getElementById('formModal').style.display = 'flex';
                 document.getElementById('formTitle').innerText = formTitle;
@@ -145,11 +146,11 @@
             }
 
             function resetForm() {
-            document.getElementById('title').value = '';
-            document.getElementById('price').value = '';
-            document.getElementById('age').value = '';
-            document.getElementById('pages').value = '';
-            document.getElementById('description').value = '';
+                document.getElementById('title').value = '';
+                document.getElementById('price').value = '';
+                document.getElementById('age').value = '';
+                document.getElementById('pages').value = '';
+                document.getElementById('description').value = '';
 
             // Noņemt atzīmes no visiem checkboxiem
             document.querySelectorAll('input[name="genre_ids[]"]').forEach(checkbox => {
@@ -158,12 +159,12 @@
         }
 
             function populateForm(title, authorId, price, age, pages, description, selectedGenres) {
-            document.getElementById('title').value = title;
-            document.getElementById('author').value = authorId;
-            document.getElementById('price').value = price;
-            document.getElementById('age').value = age ? age : '';
-            document.getElementById('pages').value = pages ? pages : '';
-            document.getElementById('description').value = description ? description : '';
+                document.getElementById('title').value = title;
+                document.getElementById('author').value = authorId;
+                document.getElementById('price').value = price;
+                document.getElementById('age').value = age ? age : '';
+                document.getElementById('pages').value = pages ? pages : '';
+                document.getElementById('description').value = description ? description : '';
 
                 // Atzīmēt atlasītos žanrus
                 selectedGenres.forEach(genreId => {
@@ -219,6 +220,7 @@
                     @endforeach
                 </select>
             </div>
+            
 
             <div class="form-group">
                 <label>Žanri:</label>
