@@ -17,8 +17,13 @@
         {{-- Search by Book Name --}}
         <div class="col-md-4">
             <label for="search">Meklēt pēc nosaukuma:</label>
-            <input type="text" name="search" id="search" class="form-control" value="{{ request('search') }}" placeholder="Ievadiet grāmatas nosaukumu">
-        </div>
+            <input 
+            type="text" 
+            name="search" 
+            class="form-control" 
+            value="{{ old('search', default: request('search')) }}" 
+            placeholder="Ievadiet grāmatas nosaukumu"
+>        </div>
 
         {{-- Search by Author --}}
         <div class="col-md-4">

@@ -10,19 +10,22 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ExportController;
 
-// Resource Routes (Put these first)
+// Specific Routes (Put these first)
+
+Route::get('/sales/export', [ExportController::class, 'exportSales'])->name('sales.export');
+Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
+Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
+Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
+Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
+Route::delete('/sales/{sale}/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
+
+// Resource Routes (Put these next)
 Route::resource('genres', GenreController::class);
 Route::resource('authors', AuthorController::class);
 Route::resource('books', BookController::class);
 Route::resource('sales', SaleController::class);
 
-// Specific Routes (Put these next)
-Route::get('/sales/export', [ExportController::class, 'exportSales'])->name('sales.export');
-Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
-Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
-Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
-Route::delete('/sales/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
-Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
+
 
 // Home Route (Authenticated Users)
 Route::get('/home', [HomeController::class, 'index'])

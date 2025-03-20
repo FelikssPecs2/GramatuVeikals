@@ -10,16 +10,19 @@ class SaleController extends Controller
 {
     // Show all sales
     public function index()
-{
-    $sales = Sale::selectRaw('book_id, sale_date, SUM(quantity) as total_quantity')
-        ->groupBy('book_id', 'sale_date')
-        ->with('book')
-        ->get();
-
-    $books = Book::all();
+    {
+        $sales = Sale::with('book')->get();
+        
+        // Use '|' as the delimiter to avoid splitting the date
+        $salesGrouped = $sales->groupBy(function($sale) {
+            return $sale->book_id . '|' . $sale->sale_date;
+        });
+        
+        $books = Book::all();
+        return view('sales', compact('salesGrouped', 'books'));
+    }
     
-    return view('sales', compact('sales', 'books'));
-}
+    
 
 
     // Show the form to create a new sale
@@ -29,11 +32,10 @@ class SaleController extends Controller
         return view('sales.create', compact('books'));
     }
 
-    public function destroy(Request $request)
+    public function destroy(Sale $sale)
     {
-        Sale::where('book_id', $request->book_id)
-            ->where('sale_date', $request->sale_date)
-            ->delete();
+        // Delete the sale
+        $sale->delete();
     
         return redirect()->route('sales.index')->with('success', 'Pārdošana dzēsta!');
     }
