@@ -136,9 +136,38 @@
             }
 
             function showCreateForm() {
-                openFormModal('Izveidot grāmatu', '{{ route('books.store') }}', 'POST');
-                resetForm();
-            }
+    // Open the modal
+    openFormModal('Izveidot grāmatu', '{{ route('books.store') }}', 'POST');
+
+    // Reset the form fields
+    resetForm();
+
+    // Add hidden inputs for page and filters
+    const form = document.getElementById('bookFormElement');
+    const pageInput = document.createElement('input');
+    pageInput.type = 'hidden';
+    pageInput.name = 'page';
+    pageInput.value = new URLSearchParams(window.location.search).get('page') || 1;
+    form.appendChild(pageInput);
+
+    const searchInput = document.createElement('input');
+    searchInput.type = 'hidden';
+    searchInput.name = 'search';
+    searchInput.value = new URLSearchParams(window.location.search).get('search') || '';
+    form.appendChild(searchInput);
+
+    const authorInput = document.createElement('input');
+    authorInput.type = 'hidden';
+    authorInput.name = 'author';
+    authorInput.value = new URLSearchParams(window.location.search).get('author') || '';
+    form.appendChild(authorInput);
+
+    const genreInput = document.createElement('input');
+    genreInput.type = 'hidden';
+    genreInput.name = 'genre';
+    genreInput.value = new URLSearchParams(window.location.search).get('genre') || '';
+    form.appendChild(genreInput);
+}
 
             function showEditForm(id, title, authorId, price, age, pages, description, selectedGenres) {
                 openFormModal('Rediģēt grāmatu', '/books/' + id, 'PUT');
@@ -219,6 +248,13 @@
             @csrf
             <input type="hidden" name="_method" id="formMethod" value="POST">
 
+            <!-- Hidden inputs for page and filters -->
+            <input type="hidden" name="page" value="{{ request('page', 1) }}">
+            <input type="hidden" name="search" value="{{ request('search') }}">
+            <input type="hidden" name="author" value="{{ request('author') }}">
+            <input type="hidden" name="genre" value="{{ request('genre') }}">
+
+            <!-- Other form fields -->
             <div class="form-group">
                 <label for="title">Grāmatas nosaukums:</label>
                 <input type="text" name="title" id="title" class="form-control" required>
@@ -232,7 +268,6 @@
                     @endforeach
                 </select>
             </div>
-            
 
             <div class="form-group">
                 <label>Žanri:</label>
@@ -270,6 +305,8 @@
             <button type="button" class="btn btn-secondary" onclick="closeFormModal()">Atcelt</button>
         </form>
     </div>
+</div>
+
 </div>
 
 {{-- Pagination Links --}}

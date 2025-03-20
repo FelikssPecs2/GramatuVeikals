@@ -24,9 +24,8 @@ class BookController extends Controller
         // Start the query
         $query = Book::with('author', 'genres');
     
-        // Search by book title
         if ($request->filled('search')) {
-            $query->where('title', 'like', '%' . $request->search . '%');
+            $query->where('title', 'like', '%' . str_replace(' ', '%', $request->search) . '%');
         }
     
         // Filter by author
@@ -67,12 +66,12 @@ class BookController extends Controller
         // Attach genres
         $book->genres()->sync($request->genre_ids);
     
-        // Redirect back to the same page with search/filter parameters and current page number
+        // Redirect back to the same page with search/filter parameters
         return redirect()->route('books.index', [
-            'page' => $request->query('page', 1), // Preserve the current page number
-            'search' => $request->query('search'), // Preserve the search parameter
-            'author' => $request->query('author'), // Preserve the author filter
-            'genre' => $request->query('genre'), // Preserve the genre filter
+            'page' => $request->page, // Preserve the current page number
+            'search' => $request->search, // Preserve the search parameter
+            'author' => $request->author, // Preserve the author filter
+            'genre' => $request->genre, // Preserve the genre filter
         ]);
     }
     
