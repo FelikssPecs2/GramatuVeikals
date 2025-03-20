@@ -12,43 +12,48 @@
         <div class="container mt-4">
 
 {{-- Search Form --}}
-<form action="{{ route('books.index') }}" method="GET" class="mb-4">
+<form action="{{ route('books.index') }}" method="GET">
     <div class="row">
-        {{-- Search by Book Name --}}
+        <!-- Search by Book Name -->
         <div class="col-md-4">
             <label for="search">Meklēt pēc nosaukuma:</label>
             <input 
-            type="text" 
-            name="search" 
-            class="form-control" 
-            value="{{ old('search', default: request('search')) }}" 
-            placeholder="Ievadiet grāmatas nosaukumu"
->        </div>
+                type="text" 
+                name="search" 
+                class="form-control" 
+                value="{{ request('search') }}" 
+                placeholder="Ievadiet grāmatas nosaukumu"
+            >
+        </div>
 
-        {{-- Search by Author --}}
+        <!-- Search by Author -->
         <div class="col-md-4">
             <label for="author">Meklēt pēc autora:</label>
             <select name="author" id="author" class="form-control">
                 <option value="">Izvēlieties autoru</option>
                 @foreach($authors as $author)
-                    <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>{{ $author->name }}</option>
+                    <option value="{{ $author->id }}" {{ request('author') == $author->id ? 'selected' : '' }}>
+                        {{ $author->name }}
+                    </option>
                 @endforeach
             </select>
         </div>
 
-        {{-- Filter by Genre --}}
+        <!-- Filter by Genre -->
         <div class="col-md-4">
             <label for="genre">Filtrēt pēc žanra:</label>
             <select name="genre" id="genre" class="form-control">
                 <option value="">Izvēlieties žanru</option>
                 @foreach($genres as $genre)
-                    <option value="{{ $genre->id }}" {{ request('genre') == $genre->id ? 'selected' : '' }}>{{ $genre->name }}</option>
+                    <option value="{{ $genre->id }}" {{ request('genre') == $genre->id ? 'selected' : '' }}>
+                        {{ $genre->name }}
+                    </option>
                 @endforeach
             </select>
         </div>
     </div>
 
-    {{-- Submit Button --}}
+    <!-- Submit Button -->
     <div class="row mt-3">
         <div class="col-md-12">
             <button type="submit" class="btn btn-primary">Meklēt</button>
@@ -56,6 +61,8 @@
         </div>
     </div>
 </form>
+
+
 
 {{-- Rest of your table and content --}}
 <table class="table mt-4">
@@ -265,4 +272,8 @@
     </div>
 </div>
 
+{{-- Pagination Links --}}
+<div class="d-flex justify-content-center mt-4">
+    {{ $books->appends(request()->query())->links() }}
+</div>
 @endsection

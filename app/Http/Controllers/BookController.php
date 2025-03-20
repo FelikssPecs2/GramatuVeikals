@@ -22,60 +22,58 @@ class BookController extends Controller
         $genres = Genre::all();
     
         // Start the query
-        $books = Book::with('author', 'genres');
+        $query = Book::with('author', 'genres');
     
         // Search by book title
-        if ($request->has('search') && $request->search != '') {
-            $books->where('title', 'like', '%' . $request->search . '%');
+        if ($request->filled('search')) {
+            $query->where('title', 'like', '%' . $request->search . '%');
         }
     
         // Filter by author
-        if ($request->has('author') && $request->author != '') {
-            $books->where('author_id', $request->author);
+        if ($request->filled('author')) {
+            $query->where('author_id', $request->author);
         }
     
         // Filter by genre
-        if ($request->has('genre') && $request->genre != '') {
-            $books->whereHas('genres', function ($query) use ($request) {
-                $query->where('genres.id', $request->genre);
+        if ($request->filled('genre')) {
+            $query->whereHas('genres', function ($q) use ($request) {
+                $q->where('genres.id', $request->genre);
             });
         }
     
-        // Get the filtered books
-        $books = $books->paginate(10);
+        // Paginate the filtered results (10 books per page)
+        $books = $query->paginate(10);
     
         // Pass data to the view
         return view('books', compact('books', 'authors', 'genres'));
     }
-
     // Show form for creating a new book
     public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
+            'title' => 'required',
             'author_id' => 'required|exists:authors,id',
             'genre_ids' => 'required|array',
             'genre_ids.*' => 'exists:genres,id',
-            'price' => 'required|numeric|min:0',
+            'price' => 'required|numeric',
             'age' => 'nullable|integer',
             'pages' => 'nullable|integer',
             'description' => 'nullable|string',
         ]);
     
-        // Izveidot jaunu grāmatu un saglabāt visus laukus
-        $book = Book::create([
-            'title' => $request->title,
-            'author_id' => $request->author_id,
-            'price' => $request->price,
-            'age' => $request->age, // Jauns vecuma lauks
-            'pages' => $request->pages, // Jauns lappušu skaita lauks
-            'description' => $request->description, // Jauns apraksta lauks
-        ]);
+        // Create the book
+        $book = Book::create($request->only(['title', 'author_id', 'price', 'age', 'pages', 'description']));
     
-        // Sinhronizēt žanrus ar grāmatu
+        // Attach genres
         $book->genres()->sync($request->genre_ids);
     
-        return redirect()->route('books.index');
+        // Redirect back to the same page with search/filter parameters and current page number
+        return redirect()->route('books.index', [
+            'page' => $request->query('page', 1), // Preserve the current page number
+            'search' => $request->query('search'), // Preserve the search parameter
+            'author' => $request->query('author'), // Preserve the author filter
+            'genre' => $request->query('genre'), // Preserve the genre filter
+        ]);
     }
     
 public function getGenres(Book $book)
@@ -121,7 +119,7 @@ public function update(Request $request, Book $book)
     // Sync genres
     $book->genres()->sync($request->genre_ids);
 
-    return redirect()->route('books.index');
+    return redirect()->route('books.index', request()->query());
 }
 
     // Delete a book
