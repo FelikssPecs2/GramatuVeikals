@@ -12,3 +12,4 @@ class Author extends Model
     // Add the 'name' attribute to the fillable property
     protected $fillable = ['name'];
 }
+

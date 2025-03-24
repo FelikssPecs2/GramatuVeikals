@@ -10,24 +10,22 @@ use App\Http\Controllers\BookController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ExportController;
 
-// Specific Routes (Put these first)
-
+// Specific Routes
 Route::get('/sales/export', [ExportController::class, 'exportSales'])->name('sales.export');
 Route::get('/sales/{sale}', [SaleController::class, 'show'])->name('sales.show');
 Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
 Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
 Route::delete('/sales/{sale}/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
+Route::get('/sales-analytics', [SaleController::class, 'salesAnalytics'])->name('sales-analytics'); 
 
-// Resource Routes (Put these next)
+// Resource Routes
 Route::resource('genres', GenreController::class);
 Route::resource('authors', AuthorController::class);
 Route::resource('books', BookController::class);
 Route::resource('sales', SaleController::class);
 
-
-
-// Home Route (Authenticated Users)
+// Home Route
 Route::get('/home', [HomeController::class, 'index'])
     ->middleware('auth')
     ->name('home');
@@ -40,7 +38,7 @@ Route::put('/books/{book}', [BookController::class, 'update'])->name('books.upda
 Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
 Route::get('/genres', [GenreController::class, 'index'])->name('genres.index');
 
-// Authentication Routes (Put these last)
+// Authentication Routes
 Route::get('/login', [AuthenticatedSessionController::class, 'create'])
     ->middleware('guest')
     ->name('login');
