@@ -2,74 +2,95 @@
 
 @section('content')
 <div class="container mt-4">
-    <h1>Pārdošanas grafiki</h1>
-
-    <!-- Sales Chart (By Date) -->
-    <div class="mb-5">
-        <h3>Pārdošanas pēc datuma</h3>
-        <canvas id="salesChart"></canvas>
+    <h1>Pārdošanas analīze</h1>
+    
+    <!-- Chart Selector -->
+    <div class="mb-4">
+        <select id="chartSelector" class="form-select">
+            <option value="date">Pārdošanas pēc datuma</option>
+            <option value="genre">Pārdošanas pēc žanra</option>
+            <option value="author">Pārdošanas pēc autora</option>
+        </select>
     </div>
 
-    <!-- Genre Sales Chart (By Genre) -->
-    <div class="mb-5">
-        <h3>Pārdošanas pēc žanra</h3>
-        <canvas id="genreSalesChart"></canvas>
-    </div>
-
-    <!-- Author Sales Chart (By Author) -->
-    <div class="mb-5">
-        <h3>Pārdošanas pēc autora</h3>
-        <canvas id="authorSalesChart"></canvas>
+    <!-- Chart Container -->
+    <div class="chart-container" style="position: relative; height:60vh; width:100%">
+        <canvas id="analyticsChart"></canvas>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Sales Chart (By Date)
-    const salesCtx = document.getElementById('salesChart').getContext('2d');
-    new Chart(salesCtx, {
-        type: 'line',
-        data: {
+    const chartData = {
+        date: {
             labels: @json($salesData->pluck('sale_date')),
             datasets: [{
-                label: 'Pārdotā daudzums',
+                label: 'Pārdotā daudzums pēc datuma',
                 data: @json($salesData->pluck('total_quantity')),
                 borderColor: 'rgb(75, 192, 192)',
-                tension: 0.1
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                type: 'line'
             }]
+        },
+        genre: {
+            labels: @json($genreData->pluck('label')),
+            datasets: [{
+                label: 'Pārdotā daudzums pēc žanra',
+                data: @json($genreData->pluck('quantity')),
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                type: 'bar'
+            }]
+        },
+        author: {
+            labels: @json($authorData->pluck('label')),
+            datasets: [{
+                label: 'Pārdotā daudzums pēc autora',
+                data: @json($authorData->pluck('quantity')),
+                backgroundColor: 'rgba(54, 162, 235, 0.7)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                type: 'bar'
+            }]
+        }
+    };
+
+    const ctx = document.getElementById('analyticsChart').getContext('2d');
+    const chart = new Chart(ctx, {
+        data: chartData.date,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return `${context.dataset.label}: ${context.raw}`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Pārdotā daudzums'
+                    }
+                }
+            }
         }
     });
 
-    // Genre Sales Chart (By Genre)
-    const genreCtx = document.getElementById('genreSalesChart').getContext('2d');
-    new Chart(genreCtx, {
-        type: 'bar',
-        data: {
-            labels: @json($genreSalesData->pluck('genre_name')),
-            datasets: [{
-                label: 'Pārdotā daudzums',
-                data: @json($genreSalesData->pluck('total_quantity')),
-                backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                borderColor: 'rgb(255, 99, 132)',
-                borderWidth: 1
-            }]
-        }
-    });
-
-    // Author Sales Chart (By Author)
-    const authorCtx = document.getElementById('authorSalesChart').getContext('2d');
-    new Chart(authorCtx, {
-        type: 'bar',
-        data: {
-            labels: @json($authorSalesData->pluck('author_name')),
-            datasets: [{
-                label: 'Pārdotā daudzums',
-                data: @json($authorSalesData->pluck('total_quantity')),
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgb(54, 162, 235)',
-                borderWidth: 1
-            }]
-        }
+    document.getElementById('chartSelector').addEventListener('change', function() {
+        const selectedValue = this.value;
+        chart.data = chartData[selectedValue];
+        chart.update();
     });
 </script>
 @endsection
