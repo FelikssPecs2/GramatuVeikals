@@ -20,31 +20,6 @@ class SaleController extends Controller
         return view('sales', compact('salesGrouped', 'books'));
     }
 
-    public function salesAnalytics()
-{
-    // Pārdošanas pēc datuma
-    $salesData = Sale::selectRaw('sale_date, SUM(quantity) as total_quantity')
-        ->groupBy('sale_date')
-        ->orderBy('sale_date')
-        ->get();
-
-    // Pārdošanas pēc žanra
-    $genreData = Sale::join('books', 'sales.book_id', '=', 'books.id')
-        ->join('genres', 'books.genre_id', '=', 'genres.id')
-        ->selectRaw('genres.name as label, SUM(sales.quantity) as quantity')
-        ->groupBy('genres.name')
-        ->get();
-
-    // Pārdošanas pēc autora
-    $authorData = Sale::join('books', 'sales.book_id', '=', 'books.id')
-        ->join('author_book', 'books.id', '=', 'author_book.book_id')
-        ->join('authors', 'author_book.author_id', '=', 'authors.id')
-        ->selectRaw('authors.name as label, SUM(sales.quantity) as quantity')
-        ->groupBy('authors.name')
-        ->get();
-
-    return view('sales-analytics', compact('salesData', 'genreData', 'authorData'));
-}
     
     
 

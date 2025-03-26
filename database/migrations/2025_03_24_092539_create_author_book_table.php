@@ -11,16 +11,9 @@ public function up()
 {
     Schema::create('author_book', function (Blueprint $table) {
         $table->id();
-        $table->unsignedBigInteger('author_id');
-        $table->unsignedBigInteger('book_id');
+        $table->foreignId('author_id')->constrained();
+        $table->foreignId('book_id')->constrained();
         $table->timestamps();
-
-        // Foreign keys
-        $table->foreign('author_id')->references('id')->on('authors')->onDelete('cascade');
-        $table->foreign('book_id')->references('id')->on('books')->onDelete('cascade');
-
-        // Unique constraint to prevent duplicate entries
-        $table->unique(['author_id', 'book_id']);
     });
 }
 

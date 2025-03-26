@@ -12,8 +12,7 @@ return new class extends Migration
     public function up()
     {
         Schema::table('books', function (Blueprint $table) {
-            $table->unsignedBigInteger('genre_id')->nullable(); // Add genre_id column
-            $table->foreign('genre_id')->references('id')->on('genres')->onDelete('set null');
+            $table->foreignId('genre_id')->nullable()->constrained();
         });
     }
     

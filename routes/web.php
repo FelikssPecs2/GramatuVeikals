@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthorController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\SalesAnalyticsController;
 
 // Specific Routes
 Route::get('/sales/export', [ExportController::class, 'exportSales'])->name('sales.export');
@@ -17,8 +18,8 @@ Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
 Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
 Route::delete('/sales/{sale}/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
-Route::get('/sales-analytics', [SaleController::class, 'salesAnalytics'])->name('sales-analytics'); 
-
+Route::get('/sales-analytics', [SalesAnalyticsController::class, 'index'])
+    ->name('sales-analytics');
 // Resource Routes
 Route::resource('genres', GenreController::class);
 Route::resource('authors', AuthorController::class);
