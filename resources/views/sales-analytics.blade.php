@@ -70,11 +70,24 @@
 
         const typeColors = colors[chartType] || colors.date;
         
+        // Format dates for labels
+        const formattedLabels = rawData.map(item => {
+            const dateStr = item.label || item.sale_date;
+            if (!dateStr) return '';
+            
+            // Parse date string (assuming format is YYYY-MM-DD)
+            const parts = dateStr.split('-');
+            if (parts.length === 3) {
+                return `${parts[2]}.${parts[1]}.${parts[0]}`; // DD.MM.YYYY format
+            }
+            return dateStr;
+        });
+        
         return {
-            labels: rawData.map(item => item.label || item.sale_date),
+            labels: formattedLabels,
             datasets: [{
                 label: label,
-                data: rawData.map(item => Number(item.quantity || item.total_quantity || 0)),
+                data: rawData.map(item => Math.round(Number(item.quantity || item.total_quantity || 0))),
                 backgroundColor: typeColors.bg,
                 borderColor: typeColors.border,
                 borderWidth: chartType === 'date' ? 3 : 1,
@@ -138,6 +151,12 @@
                         ticks: {
                             font: {
                                 size: 12
+                            },
+                            stepSize: 1,
+                            callback: function(value) {
+                                if (value % 1 === 0) {
+                                    return value;
+                                }
                             }
                         }
                     },
@@ -149,12 +168,9 @@
                             font: {
                                 size: 12
                             },
-                            callback: function(value) {
-                                if (type === 'date') {
-                                    return moment(value).format('DD.MM.YYYY');
-                                }
-                                return value;
-                            }
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 45
                         }
                     }
                 },
@@ -218,12 +234,9 @@
             e.preventDefault();
             
             const formData = new FormData(this);
-            const params = new URLSearchParams();
-            
-            // Add all form data to params
-            for (const [key, value] of formData.entries()) {
-                if (value) params.append(key, value);
-            }
+            const submitButton = e.target.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Loading...';
 
             fetch(`/sales-analytics/filter`, {
                 method: 'POST',
@@ -234,8 +247,17 @@
                 },
                 body: JSON.stringify(Object.fromEntries(formData))
             })
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
                 .then(data => {
+                    if (!data.success) {
+                        throw new Error(data.message || 'Unknown error occurred');
+                    }
+
                     let label = 'Pārdotā daudzums';
                     let chartType = 'date';
                     
@@ -249,7 +271,11 @@
                 })
                 .catch(error => {
                     console.error('Filter error:', error);
-                    alert('Filtrēšanas laikā radās kļūda!');
+                    alert('Filtrēšanas kļūda: ' + error.message);
+                })
+                .finally(() => {
+                    submitButton.disabled = false;
+                    submitButton.textContent = 'Filtrēt';
                 });
         });
 
