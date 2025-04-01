@@ -4,13 +4,40 @@
 <div class="container mt-4">
     <h1>Pārdošanas analīze</h1>
     
-    <!-- Chart Selector -->
-    <div class="mb-4">
-        <select id="chartSelector" class="form-select">
-            <option value="date">Pārdošanas pēc datuma</option>
-            <option value="genre">Pārdošanas pēc žanra</option>
-            <option value="author">Pārdošanas pēc autora</option>
-        </select>
+    <!-- Filter Controls -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form id="filterForm">
+                @csrf
+                <div class="row">
+                    <div class="col-md-3">
+                        <label for="filterType" class="form-label">Filtrēt pēc:</label>
+                        <select id="filterType" class="form-select" name="filter_type">
+                            <option value="all">Visi dati</option>
+                            <option value="genre">Žanrs</option>
+                            <option value="author">Autors</option>
+                            <option value="book">Grāmata</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3" id="specificFilterContainer" style="display:none;">
+                        <label for="specificFilter" class="form-label" id="specificFilterLabel">Izvēlieties:</label>
+                        <select id="specificFilter" class="form-select" name="specific_filter" disabled>
+                            <option value="">Ielādē...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="startDate" class="form-label">No datuma:</label>
+                        <input type="date" id="startDate" class="form-control" name="start_date">
+                    </div>
+                    <div class="col-md-3">
+                        <label for="endDate" class="form-label">Līdz datumam:</label>
+                        <input type="date" id="endDate" class="form-control" name="end_date">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary mt-3">Filtrēt</button>
+                <button type="button" id="resetFilters" class="btn btn-outline-secondary mt-3">Atiestatīt</button>
+            </form>
+        </div>
     </div>
 
     <!-- Chart Container -->
@@ -20,13 +47,25 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment"></script>
 <script>
-    // Prepare chart data with better visibility settings
+    // Initialize with default data
+    const initialData = {
+        date: @json($salesData),
+        genre: @json($genreData),
+        author: @json($authorData)
+    };
+
+    let chart = null;
+
+    // Prepare chart data
     const prepareChartData = (rawData, label, chartType = 'bar') => {
         const colors = {
             date: { bg: 'rgba(54, 162, 235, 0.7)', border: 'rgba(54, 162, 235, 1)' },
             genre: { bg: 'rgba(255, 99, 132, 0.7)', border: 'rgba(255, 99, 132, 1)' },
-            author: { bg: 'rgba(75, 192, 192, 0.7)', border: 'rgba(75, 192, 192, 1)' }
+            author: { bg: 'rgba(75, 192, 192, 0.7)', border: 'rgba(75, 192, 192, 1)' },
+            book: { bg: 'rgba(153, 102, 255, 0.7)', border: 'rgba(153, 102, 255, 1)' }
         };
 
         const typeColors = colors[chartType] || colors.date;
@@ -38,33 +77,26 @@
                 data: rawData.map(item => Number(item.quantity || item.total_quantity || 0)),
                 backgroundColor: typeColors.bg,
                 borderColor: typeColors.border,
-                borderWidth: chartType === 'date' ? 3 : 1, // Thicker line for date chart
+                borderWidth: chartType === 'date' ? 3 : 1,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: typeColors.border,
-                pointRadius: chartType === 'date' ? 4 : 3, // Larger points for line chart
+                pointRadius: chartType === 'date' ? 4 : 3,
                 pointHoverRadius: 6,
-                tension: chartType === 'date' ? 0.1 : 0, // Slight curve for line chart
-                fill: chartType === 'date' ? true : false, // Area under line
+                tension: chartType === 'date' ? 0.1 : 0,
+                fill: chartType === 'date' ? true : false,
                 type: chartType === 'date' ? 'line' : 'bar'
             }]
         };
     };
 
-    const chartData = {
-        date: prepareChartData(@json($salesData), 'Pārdotā daudzums pēc datuma', 'date'),
-        genre: prepareChartData(@json($genreData), 'Pārdotā daudzums pēc žanra', 'genre'),
-        author: prepareChartData(@json($authorData), 'Pārdotā daudzums pēc autora', 'author')
-    };
-
-    let chart = null;
-
-    function initChart(type) {
+    // Initialize chart
+    function initChart(data, type, label) {
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         
         if (chart) chart.destroy();
         
         chart = new Chart(ctx, {
-            data: chartData[type],
+            data: prepareChartData(data, label, type),
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
@@ -116,26 +148,124 @@
                         ticks: {
                             font: {
                                 size: 12
+                            },
+                            callback: function(value) {
+                                if (type === 'date') {
+                                    return moment(value).format('DD.MM.YYYY');
+                                }
+                                return value;
                             }
                         }
                     }
                 },
                 elements: {
                     line: {
-                        borderWidth: 3 // Thicker line
+                        borderWidth: 3
                     }
                 }
             }
         });
     }
 
-    // Initialize with date chart
-    initChart('date');
+    // Initialize with default data
+    document.addEventListener('DOMContentLoaded', function() {
+        initChart(initialData.date, 'date', 'Pārdotā daudzums pēc datuma');
 
-    // Handle chart type change
-    document.getElementById('chartSelector').addEventListener('change', function() {
-        initChart(this.value);
+        // Handle filter type change
+        document.getElementById('filterType').addEventListener('change', function() {
+            const specificFilterContainer = document.getElementById('specificFilterContainer');
+            const specificFilter = document.getElementById('specificFilter');
+            
+            if (this.value === 'all') {
+                specificFilterContainer.style.display = 'none';
+                specificFilter.disabled = true;
+            } else {
+                specificFilterContainer.style.display = 'block';
+                specificFilter.disabled = false;
+                
+                // Update label
+                const labels = {
+                    genre: 'Izvēlieties žanru:',
+                    author: 'Izvēlieties autoru:',
+                    book: 'Izvēlieties grāmatu:'
+                };
+                document.getElementById('specificFilterLabel').textContent = labels[this.value];
+                
+                // Clear previous options
+                specificFilter.innerHTML = '<option value="">Ielādē...</option>';
+                
+                // Load appropriate options
+                fetch(`/get-list/${this.value}-list`)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.length === 0) {
+                            specificFilter.innerHTML = '<option value="">Nav datu</option>';
+                            return;
+                        }
+                        specificFilter.innerHTML = data.map(item => 
+                            `<option value="${item.id}">${item.name}</option>`
+                        ).join('');
+                    })
+                    .catch(error => {
+                        console.error('Error loading filter options:', error);
+                        specificFilter.innerHTML = '<option value="">Kļūda ielādējot</option>';
+                    });
+            }
+        });
+
+        // Handle form submission
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const params = new URLSearchParams();
+            
+            // Add all form data to params
+            for (const [key, value] of formData.entries()) {
+                if (value) params.append(key, value);
+            }
+
+            fetch(`/sales-analytics/filter`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                },
+                body: JSON.stringify(Object.fromEntries(formData))
+            })
+                .then(response => response.json())
+                .then(data => {
+                    let label = 'Pārdotā daudzums';
+                    let chartType = 'date';
+                    
+                    const filterType = formData.get('filter_type');
+                    if (filterType !== 'all') {
+                        label = `Pārdotā daudzums (${data.label || filterType})`;
+                        chartType = filterType;
+                    }
+                    
+                    initChart(data.results, chartType, label);
+                })
+                .catch(error => {
+                    console.error('Filter error:', error);
+                    alert('Filtrēšanas laikā radās kļūda!');
+                });
+        });
+
+        // Reset filters
+        document.getElementById('resetFilters').addEventListener('click', function() {
+            document.getElementById('filterForm').reset();
+            document.getElementById('specificFilterContainer').style.display = 'none';
+            document.getElementById('specificFilter').disabled = true;
+            initChart(initialData.date, 'date', 'Pārdotā daudzums pēc datuma');
+        });
+
+        // Trigger initial filter type change if not 'all'
+        const initialFilterType = document.getElementById('filterType').value;
+        if (initialFilterType !== 'all') {
+            document.getElementById('filterType').dispatchEvent(new Event('change'));
+        }
     });
 </script>
-
-@endsection
+@endsection 

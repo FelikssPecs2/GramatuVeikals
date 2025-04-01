@@ -8,10 +8,16 @@ class Book extends Model
 {
     use HasFactory;
 
-    // Define which fields can be mass-assigned
-    protected $fillable = ['title', 'price', 'author_id', 'genre_ids', 'age', 'pages', 'description'];
+    protected $fillable = [
+        'title', 
+        'price', 
+        'author_id', 
+        'age', 
+        'pages', 
+        'description'
+    ];
 
-    // Relationships with Author and Genre models
+    // Relationships
     public function author()
     {
         return $this->belongsTo(Author::class);
@@ -21,19 +27,16 @@ class Book extends Model
     {
         return $this->belongsToMany(Genre::class);
     }
-    public function genre()
-{
-    return $this->belongsTo(Genre::class);
-}
 
-public function authors()
-{
-    return $this->belongsToMany(Author::class, 'author_book');
-}
 
-public function sales()
-{
-    return $this->hasMany(Sale::class, 'book_id');
-}
 
+    public function authors()
+    {
+        return $this->belongsToMany(Author::class, 'author_book');
+    }
+
+    public function sales()
+    {
+        return $this->hasMany(Sale::class);
+    }
 }

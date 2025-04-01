@@ -18,8 +18,10 @@ Route::post('/sales', [SaleController::class, 'store'])->name('sales.store');
 Route::post('/books/update/{book}', [BookController::class, 'update'])->name('books.update');
 Route::get('/books/{book}/genres', [BookController::class, 'getGenres'])->name('books.genres');
 Route::delete('/sales/{sale}/delete', [SaleController::class, 'destroy'])->name('sales.destroy');
-Route::get('/sales-analytics', [SalesAnalyticsController::class, 'index'])
-    ->name('sales-analytics');
+Route::get('/sales-analytics', [SalesAnalyticsController::class, 'index'])->name('sales-analytics');
+Route::post('/sales-analytics/filter', [SalesAnalyticsController::class, 'filter'])->name('sales-analytics.filter');
+Route::get('/get-list/{type}', [SalesAnalyticsController::class, 'getList'])->name('sales-analytics.get-list');
+
 // Resource Routes
 Route::resource('genres', GenreController::class);
 Route::resource('authors', AuthorController::class);
@@ -30,14 +32,6 @@ Route::resource('sales', SaleController::class);
 Route::get('/home', [HomeController::class, 'index'])
     ->middleware('auth')
     ->name('home');
-
-Route::get('/books', [BookController::class, 'index'])->name('books.index');
-Route::get('/books/create', [BookController::class, 'create'])->name('books.create');
-Route::post('/books', [BookController::class, 'store'])->name('books.store');
-Route::get('/books/{book}/edit', [BookController::class, 'edit'])->name('books.edit');
-Route::put('/books/{book}', [BookController::class, 'update'])->name('books.update');
-Route::delete('/books/{book}', [BookController::class, 'destroy'])->name('books.destroy');
-Route::get('/genres', [GenreController::class, 'index'])->name('genres.index');
 
 // Authentication Routes
 Route::get('/login', [AuthenticatedSessionController::class, 'create'])
