@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -6,25 +7,55 @@ use App\Models\Sale;
 use App\Models\Author;
 use App\Models\Genre;
 use App\Models\Book;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class SalesAnalyticsController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        // Get lists for filters - only authors with books that have sales
-        $authors = Author::whereHas('books.sales')->get();
+        // Get filter lists
+        $genres = Genre::orderBy('name')->get(['id', 'name']);
+        $authors = Author::orderBy('name')->get(['id', 'name']);
+        $books = Book::with('author')->orderBy('title')->get(['id', 'title', 'author_id']);
         
-        // Only genres that have books with sales
-        $genres = Genre::whereHas('books.sales')->get();
+        // Get initial sales data for the chart
+        $salesData = Sale::selectRaw('DATE(sale_date) as label, SUM(quantity) as quantity')
+            ->groupBy('label')
+            ->orderBy('label')
+            ->get();
         
-        // Rest of your index method remains the same
-        $salesData = $this->getSalesByDate($request);
-        $genreData = $this->getSalesByGenre($request);
-        $authorData = $this->getSalesByAuthor($request);
+        // Get genre sales data - FIXED VERSION
+        $genreData = DB::table('genres')
+            ->select(
+                'genres.id',
+                'genres.name',
+                DB::raw('COALESCE(SUM(sales.quantity), 0) as total_quantity')
+            )
+            ->leftJoin('book_genre', 'genres.id', '=', 'book_genre.genre_id')
+            ->leftJoin('books', 'book_genre.book_id', '=', 'books.id')
+            ->leftJoin('sales', 'books.id', '=', 'sales.book_id')
+            ->groupBy('genres.id', 'genres.name')
+            ->orderBy('genres.name')
+            ->get();
         
-        return view('sales-analytics', compact('salesData', 'genreData', 'authorData', 'authors', 'genres'));
+        // Get author sales data
+        $authorData = Author::withCount(['sales as total_quantity' => function($query) {
+                $query->select(DB::raw('SUM(quantity)'));
+            }])
+            ->orderBy('name')
+            ->get(['id', 'name', 'total_quantity']);
+        
+        return view('sales-analytics', compact(
+            'genres', 
+            'authors', 
+            'books', 
+            'salesData',
+            'genreData',
+            'authorData'
+        ));
     }
-    
+
     public function filter(Request $request)
     {
         try {
@@ -32,19 +63,20 @@ class SalesAnalyticsController extends Controller
             $specificFilter = $request->input('specific_filter');
             $startDate = $request->input('start_date');
             $endDate = $request->input('end_date');
-    
+
             $query = Sale::query();
-    
+
+            // Apply specific filters
             switch ($filterType) {
                 case 'genre':
                     $query->whereHas('book.genres', function($q) use ($specificFilter) {
-                        $q->where('genres.id', $specificFilter); // Explicitly specify table.column
+                        $q->where('genres.id', $specificFilter);
                     });
                     break;
                     
                 case 'author':
                     $query->whereHas('book.author', function($q) use ($specificFilter) {
-                        $q->where('authors.id', $specificFilter); // Explicitly specify table.column
+                        $q->where('authors.id', $specificFilter);
                     });
                     break;
                     
@@ -52,7 +84,7 @@ class SalesAnalyticsController extends Controller
                     $query->where('book_id', $specificFilter);
                     break;
             }
-    
+
             // Apply date filters
             if ($startDate) {
                 $query->where('sale_date', '>=', $startDate);
@@ -61,19 +93,19 @@ class SalesAnalyticsController extends Controller
             if ($endDate) {
                 $query->where('sale_date', '<=', $endDate);
             }
-    
-            // Get results - using DATE() for consistent formatting
+
+            // Get results
             $results = $query->selectRaw('DATE(sale_date) as label, SUM(quantity) as quantity')
-                ->groupBy('label')  // Group by the formatted date
+                ->groupBy('label')
                 ->orderBy('label')
                 ->get();
-    
+
             return response()->json([
                 'success' => true,
                 'results' => $results,
                 'label' => $this->getFilterLabel($filterType, $specificFilter)
             ]);
-    
+
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
@@ -84,142 +116,40 @@ class SalesAnalyticsController extends Controller
         }
     }
 
-private function getFilterLabel($type, $id)
-{
-    return match($type) {
-        'genre' => Genre::find($id)->name ?? '',
-        'author' => Author::find($id)->name ?? '',
-        'book' => Book::find($id)->title ?? '',
-        default => 'All Sales'
-    };
-}
+    private function getFilterLabel($type, $id)
+    {
+        if (empty($id)) return 'All Sales';
         
-     
-    
+        return match($type) {
+            'genre' => Genre::find($id)->name ?? 'Unknown Genre',
+            'author' => Author::find($id)->name ?? 'Unknown Author',
+            'book' => Book::find($id)->title ?? 'Unknown Book',
+            default => 'All Sales'
+        };
+    }
+
     public function getList($type)
     {
-        $data = match($type) {
-            'genre-list' => Genre::has('books.sales')->select('id', 'name')->get(),
-            'author-list' => Author::has('books.sales')->select('id', 'name')->get(),
-            'book-list' => Book::has('sales')->select('id', 'title as name')->get(),
-            default => []
-        };
-        
-        return response()->json($data);
-    }
-    
-    // ... [keep all your other methods exactly as they were] ...
-    
-    private function getSalesByGenre(Request $request)
-    {
-        return Sale::join('books', 'sales.book_id', '=', 'books.id')
-            ->join('book_genre', 'books.id', '=', 'book_genre.book_id')
-            ->join('genres', 'book_genre.genre_id', '=', 'genres.id')
-            ->selectRaw('genres.id, genres.name as label, SUM(sales.quantity) as quantity')
-            ->when($request->has('start_date'), function($query) use ($request) {
-                $query->where('sale_date', '>=', $request->start_date);
-            })
-            ->when($request->has('end_date'), function($query) use ($request) {
-                $query->where('sale_date', '<=', $request->end_date);
-            })
-            ->groupBy('genres.id', 'genres.name')
-            ->get();
-    }
-    
-    
-    private function getSalesByAuthor(Request $request)
-    {
-        return Sale::join('books', 'sales.book_id', '=', 'books.id')
-            ->join('authors', 'books.author_id', '=', 'authors.id')
-            ->selectRaw('authors.name as label, SUM(sales.quantity) as quantity')
-            ->when($request->has('start_date'), function($query) use ($request) {
-                $query->where('sale_date', '>=', $request->start_date);
-            })
-            ->when($request->has('end_date'), function($query) use ($request) {
-                $query->where('sale_date', '<=', $request->end_date);
-            })
-            ->groupBy('authors.id', 'authors.name')
-            ->get();
-    }
+        try {
+            switch ($type) {
+                case 'genre-list':
+                    $data = Genre::orderBy('name')->get(['id', 'name']);
+                    break;
+                case 'author-list':
+                    $data = Author::orderBy('name')->get(['id', 'name']);
+                    break;
+                case 'book-list':
+                    $data = Book::orderBy('title')->get(['id', 'title as name']);
+                    break;
+                default:
+                    $data = collect();
+                    break;
+            }
 
-    // NEW METHOD: Get sales data for multiple filters combined
-    public function getCombinedSales(Request $request)
-    {
-        $query = Sale::query();
-        
-        if ($request->has('genres')) {
-            $query->whereHas('book.genres', function($q) use ($request) {
-                $q->whereIn('id', $request->genres);
-            });
-        }
-        
-        if ($request->has('authors')) {
-            $query->whereHas('book.author', function($q) use ($request) {
-                $q->whereIn('id', $request->authors);
-            });
-        }
-        
-        if ($request->has('start_date')) {
-            $query->where('sale_date', '>=', $request->start_date);
-        }
-        
-        if ($request->has('end_date')) {
-            $query->where('sale_date', '<=', $request->end_date);
-        }
-        
-        return $query->selectRaw('DATE(sale_date) as date, SUM(quantity) as total')
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-    }
+            return response()->json($data);
 
-    private function getSalesByDate(Request $request)
-{
-    return Sale::query()
-        ->when($request->has('start_date'), function($query) use ($request) {
-            $query->where('sale_date', '>=', $request->start_date);
-        })
-        ->when($request->has('end_date'), function($query) use ($request) {
-            $query->where('sale_date', '<=', $request->end_date);
-        })
-        ->selectRaw('sale_date as label, SUM(quantity) as quantity')
-        ->groupBy('sale_date')
-        ->orderBy('sale_date')
-        ->get();
-}
-    // NEW METHOD: Get top selling items
-    public function getTopSellers(Request $request)
-    {
-        $limit = $request->input('limit', 10);
-        $type = $request->input('type', 'books');
-        
-        switch ($type) {
-            case 'books':
-                return Sale::join('books', 'sales.book_id', '=', 'books.id')
-                    ->selectRaw('books.title as name, SUM(sales.quantity) as total')
-                    ->groupBy('books.id', 'books.title')
-                    ->orderByDesc('total')
-                    ->limit($limit)
-                    ->get();
-                
-            case 'authors':
-                return Sale::join('books', 'sales.book_id', '=', 'books.id')
-                    ->join('authors', 'books.author_id', '=', 'authors.id')
-                    ->selectRaw('authors.name, SUM(sales.quantity) as total')
-                    ->groupBy('authors.id', 'authors.name')
-                    ->orderByDesc('total')
-                    ->limit($limit)
-                    ->get();
-                    
-            case 'genres':
-                return Sale::join('books', 'sales.book_id', '=', 'books.id')
-                    ->join('book_genre', 'books.id', '=', 'book_genre.book_id')
-                    ->join('genres', 'book_genre.genre_id', '=', 'genres.id')
-                    ->selectRaw('genres.name, SUM(sales.quantity) as total')
-                    ->groupBy('genres.id', 'genres.name')
-                    ->orderByDesc('total')
-                    ->limit($limit)
-                    ->get();
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
         }
     }
 }

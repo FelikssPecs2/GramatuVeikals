@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -8,16 +9,8 @@ class Book extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'title', 
-        'price', 
-        'author_id', 
-        'age', 
-        'pages', 
-        'description'
-    ];
+    protected $fillable = ['title', 'author_id'];
 
-    // Relationships
     public function author()
     {
         return $this->belongsTo(Author::class);
@@ -25,14 +18,7 @@ class Book extends Model
 
     public function genres()
     {
-        return $this->belongsToMany(Genre::class);
-    }
-
-
-
-    public function authors()
-    {
-        return $this->belongsToMany(Author::class, 'author_book');
+        return $this->belongsToMany(Genre::class, 'book_genre');
     }
 
     public function sales()

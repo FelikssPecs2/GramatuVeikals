@@ -52,35 +52,37 @@
 <script>
     // Initialize with default data
     const initialData = {
-        date: @json($salesData),
-        genre: @json($genreData),
-        author: @json($authorData)
+        date: @json($salesData ?? []),
+        genre: @json($genreData ?? []),
+        author: @json($authorData ?? [])
     };
 
     let chart = null;
 
-    // Prepare chart data
-    const prepareChartData = (rawData, label, chartType = 'bar') => {
+    // Prepare chart data - all as line charts now
+    const prepareChartData = (rawData, label, chartType = 'line') => {
         const colors = {
-            date: { bg: 'rgba(54, 162, 235, 0.7)', border: 'rgba(54, 162, 235, 1)' },
-            genre: { bg: 'rgba(255, 99, 132, 0.7)', border: 'rgba(255, 99, 132, 1)' },
-            author: { bg: 'rgba(75, 192, 192, 0.7)', border: 'rgba(75, 192, 192, 1)' },
-            book: { bg: 'rgba(153, 102, 255, 0.7)', border: 'rgba(153, 102, 255, 1)' }
+            date: { border: 'rgba(54, 162, 235, 1)', hover: 'rgba(54, 162, 235, 0.8)' },
+            genre: { border: 'rgba(255, 99, 132, 1)', hover: 'rgba(255, 99, 132, 0.8)' },
+            author: { border: 'rgba(75, 192, 192, 1)', hover: 'rgba(75, 192, 192, 0.8)' },
+            book: { border: 'rgba(153, 102, 255, 1)', hover: 'rgba(153, 102, 255, 0.8)' }
         };
 
         const typeColors = colors[chartType] || colors.date;
         
-        // Format dates for labels
+        // Format labels - handle both date-based and category-based data
         const formattedLabels = rawData.map(item => {
+            // For date-based data
             const dateStr = item.label || item.sale_date;
-            if (!dateStr) return '';
-            
-            // Parse date string (assuming format is YYYY-MM-DD)
-            const parts = dateStr.split('-');
-            if (parts.length === 3) {
-                return `${parts[2]}.${parts[1]}.${parts[0]}`; // DD.MM.YYYY format
+            if (dateStr) {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}.${parts[1]}.${parts[0]}`;
+                }
+                return dateStr;
             }
-            return dateStr;
+            // For category-based data (genres/authors/books)
+            return item.name || item.title || '';
         });
         
         return {
@@ -88,21 +90,25 @@
             datasets: [{
                 label: label,
                 data: rawData.map(item => Math.round(Number(item.quantity || item.total_quantity || 0))),
-                backgroundColor: typeColors.bg,
+                backgroundColor: 'transparent',
                 borderColor: typeColors.border,
-                borderWidth: chartType === 'date' ? 3 : 1,
+                borderWidth: 2,
                 pointBackgroundColor: '#fff',
                 pointBorderColor: typeColors.border,
-                pointRadius: chartType === 'date' ? 4 : 3,
+                pointRadius: 4,
                 pointHoverRadius: 6,
-                tension: chartType === 'date' ? 0.1 : 0,
-                fill: chartType === 'date' ? true : false,
-                type: chartType === 'date' ? 'line' : 'bar'
+                pointHoverBackgroundColor: typeColors.hover,
+                pointHoverBorderColor: '#fff',
+                pointHitRadius: 10,
+                pointBorderWidth: 2,
+                tension: 0.1,
+                fill: false,
+                type: 'line' // Force all charts to be line charts
             }]
         };
     };
 
-    // Initialize chart
+    // Initialize chart - all as line charts
     function initChart(data, type, label) {
         const ctx = document.getElementById('analyticsChart').getContext('2d');
         
@@ -120,13 +126,22 @@
                             font: {
                                 size: 14,
                                 weight: 'bold'
-                            }
+                            },
+                            padding: 20,
+                            usePointStyle: true
                         }
                     },
                     tooltip: {
-                        backgroundColor: 'rgba(0,0,0,0.8)',
-                        titleFont: { size: 14 },
-                        bodyFont: { size: 12 },
+                        backgroundColor: 'rgba(0,0,0,0.85)',
+                        titleFont: { 
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: { 
+                            size: 12 
+                        },
+                        padding: 12,
+                        displayColors: false,
                         callbacks: {
                             label: function(context) {
                                 return `${context.dataset.label}: ${context.raw}`;
@@ -138,7 +153,8 @@
                     y: {
                         beginAtZero: true,
                         grid: {
-                            color: 'rgba(0,0,0,0.1)'
+                            color: 'rgba(0,0,0,0.05)',
+                            drawBorder: false
                         },
                         title: {
                             display: true,
@@ -146,23 +162,21 @@
                             font: {
                                 size: 14,
                                 weight: 'bold'
-                            }
+                            },
+                            padding: { top: 10, bottom: 20 }
                         },
                         ticks: {
                             font: {
                                 size: 12
                             },
                             stepSize: 1,
-                            callback: function(value) {
-                                if (value % 1 === 0) {
-                                    return value;
-                                }
-                            }
+                            padding: 5
                         }
                     },
                     x: {
                         grid: {
-                            display: false
+                            display: false,
+                            drawBorder: false
                         },
                         ticks: {
                             font: {
@@ -170,13 +184,19 @@
                             },
                             autoSkip: false,
                             maxRotation: 45,
-                            minRotation: 45
+                            minRotation: 45,
+                            padding: 10
                         }
                     }
                 },
                 elements: {
                     line: {
-                        borderWidth: 3
+                        borderWidth: 2,
+                        tension: 0.1
+                    },
+                    point: {
+                        radius: 4,
+                        hoverRadius: 6
                     }
                 }
             }
@@ -214,16 +234,11 @@
                 fetch(`/get-list/${this.value}-list`)
                     .then(response => response.json())
                     .then(data => {
-                        if (data.length === 0) {
-                            specificFilter.innerHTML = '<option value="">Nav datu</option>';
-                            return;
-                        }
-                        specificFilter.innerHTML = data.map(item => 
-                            `<option value="${item.id}">${item.name}</option>`
-                        ).join('');
+                        specificFilter.innerHTML = data.length 
+                            ? data.map(item => `<option value="${item.id}">${item.name}</option>`).join('')
+                            : '<option value="">Nav datu</option>';
                     })
-                    .catch(error => {
-                        console.error('Error loading filter options:', error);
+                    .catch(() => {
                         specificFilter.innerHTML = '<option value="">Kļūda ielādējot</option>';
                     });
             }
@@ -241,42 +256,31 @@
             fetch(`/sales-analytics/filter`, {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                    'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(Object.fromEntries(formData))
             })
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (!data.success) {
-                        throw new Error(data.message || 'Unknown error occurred');
-                    }
-
-                    let label = 'Pārdotā daudzums';
-                    let chartType = 'date';
-                    
-                    const filterType = formData.get('filter_type');
-                    if (filterType !== 'all') {
-                        label = `Pārdotā daudzums (${data.label || filterType})`;
-                        chartType = filterType;
-                    }
-                    
-                    initChart(data.results, chartType, label);
-                })
-                .catch(error => {
-                    console.error('Filter error:', error);
-                    alert('Filtrēšanas kļūda: ' + error.message);
-                })
-                .finally(() => {
-                    submitButton.disabled = false;
-                    submitButton.textContent = 'Filtrēt';
-                });
+            .then(response => response.json())
+            .then(data => {
+                if (!data.success) throw new Error(data.message || 'Unknown error');
+                initChart(
+                    data.results, 
+                    formData.get('filter_type'), // Keep the type for color coding
+                    formData.get('filter_type') === 'all' 
+                        ? 'Pārdotā daudzums' 
+                        : `Pārdotā daudzums (${data.label || formData.get('filter_type')})`
+                );
+            })
+            .catch(error => {
+                console.error('Filter error:', error);
+                alert('Filtrēšanas kļūda: ' + error.message);
+            })
+            .finally(() => {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Filtrēt';
+            });
         });
 
         // Reset filters
@@ -288,10 +292,9 @@
         });
 
         // Trigger initial filter type change if not 'all'
-        const initialFilterType = document.getElementById('filterType').value;
-        if (initialFilterType !== 'all') {
+        if (document.getElementById('filterType').value !== 'all') {
             document.getElementById('filterType').dispatchEvent(new Event('change'));
         }
     });
 </script>
-@endsection 
+@endsection
