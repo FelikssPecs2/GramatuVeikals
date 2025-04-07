@@ -57,64 +57,77 @@ class SalesAnalyticsController extends Controller
     }
 
     public function filter(Request $request)
-    {
-        try {
-            $filterType = $request->input('filter_type', 'all');
-            $specificFilter = $request->input('specific_filter');
-            $startDate = $request->input('start_date');
-            $endDate = $request->input('end_date');
+{
+    try {
+        $filterType = $request->input('filter_type', 'all');
+        $specificFilters = $request->input('specific_filters', []);
+        $startDate = $request->input('start_date');
+        $endDate = $request->input('end_date');
 
-            $query = Sale::query();
+        $results = [];
+        $labels = [];
 
-            // Apply specific filters
-            switch ($filterType) {
-                case 'genre':
-                    $query->whereHas('book.genres', function($q) use ($specificFilter) {
-                        $q->where('genres.id', $specificFilter);
-                    });
-                    break;
-                    
-                case 'author':
-                    $query->whereHas('book.author', function($q) use ($specificFilter) {
-                        $q->where('authors.id', $specificFilter);
-                    });
-                    break;
-                    
-                case 'book':
-                    $query->where('book_id', $specificFilter);
-                    break;
+        // Ja ir atlasīti vairāki filtri
+        if (is_array($specificFilters)) {  // Fixed: Added closing parenthesis
+            foreach ($specificFilters as $filterId) {
+                $query = Sale::query();
+
+                switch ($filterType) {
+                    case 'genre':
+                        $query->whereHas('book.genres', function($q) use ($filterId) {
+                            $q->where('genres.id', $filterId);
+                        });
+                        $label = Genre::find($filterId)->name ?? 'Unknown Genre';
+                        break;
+                        
+                    case 'author':
+                        $query->whereHas('book.author', function($q) use ($filterId) {
+                            $q->where('authors.id', $filterId);
+                        });
+                        $label = Author::find($filterId)->name ?? 'Unknown Author';
+                        break;
+                        
+                    case 'book':
+                        $query->where('book_id', $filterId);
+                        $label = Book::find($filterId)->title ?? 'Unknown Book';
+                        break;
+                }
+
+                // Pievieno datumu filtrus
+                if ($startDate) {
+                    $query->where('sale_date', '>=', $startDate);
+                }
+                
+                if ($endDate) {
+                    $query->where('sale_date', '<=', $endDate);
+                }
+
+                // Iegūst datus
+                $data = $query->selectRaw('DATE(sale_date) as date, SUM(quantity) as total')
+                    ->groupBy('date')
+                    ->orderBy('date')
+                    ->get()
+                    ->pluck('total', 'date');
+
+                $results[] = [
+                    'label' => $label,
+                    'data' => $data
+                ];
             }
-
-            // Apply date filters
-            if ($startDate) {
-                $query->where('sale_date', '>=', $startDate);
-            }
-            
-            if ($endDate) {
-                $query->where('sale_date', '<=', $endDate);
-            }
-
-            // Get results
-            $results = $query->selectRaw('DATE(sale_date) as label, SUM(quantity) as quantity')
-                ->groupBy('label')
-                ->orderBy('label')
-                ->get();
-
-            return response()->json([
-                'success' => true,
-                'results' => $results,
-                'label' => $this->getFilterLabel($filterType, $specificFilter)
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Error filtering data: ' . $e->getMessage(),
-                'results' => [],
-                'label' => 'Error'
-            ], 500);
         }
+
+        return response()->json([
+            'success' => true,
+            'results' => $results
+        ]);
+
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'message' => 'Kļūda filtrējot datus: ' . $e->getMessage()
+        ], 500);
     }
+}
 
     private function getFilterLabel($type, $id)
     {
